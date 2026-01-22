@@ -47,7 +47,7 @@ class WikiLinkParser {
       const linkContent = match[1];
       
       // 解析别名：[[NoteTitle|Alias]]
-      const [title, alias] = linkContent.split('|');
+      const [, alias] = linkContent.split('|');
       
       links.push({
         text: fullText,
@@ -272,8 +272,9 @@ class GraphDataStructure {
         if (!visited.has(neighbor)) {
           dfs1(neighbor);
         }
+      }
       order.push(nodeId);
-    }
+    };
 
     // 构建反向图
     const reverseAdjList: AdjacencyList = {};
@@ -295,6 +296,7 @@ class GraphDataStructure {
           dfs2(neighbor, adjList);
         }
       }
+    };
 
     for (let i = order.length - 1; i >= 0; i--) {
       const nodeId = order[i];
@@ -428,7 +430,6 @@ class KnowledgeGraphEngine {
 
     // 更新笔记的链接
     note.forwardLinks = linkReferences;
-  }
 
     // 更新反向链接
     await this.updateBacklinks(note);
@@ -492,21 +493,19 @@ class KnowledgeGraphEngine {
         note.forwardLinks.length + note.backlinks.length;
 
       nodes.push({
-        data: {
-          id: note.id,
-          label: note.title,
-          weight: connections
-        },
-        });
+        id: note.id,
+        title: note.title,
+        size: connections,
+        color: this.getNodeColor(connections)
+      });
 
       // 生成边
       for (const link of note.forwardLinks) {
         edges.push({
-          data: {
-            source: note.id,
-            targetId: link.targetNoteId
-          },
-          weight: 1
+          source: note.id,
+          target: link.targetNoteId,
+          weight: 1,
+          type: 'forward'
         });
       }
     }
@@ -518,86 +517,18 @@ class KnowledgeGraphEngine {
    * 计算图的统计信息
    */
   getStats(): GraphStats {
-    const nodes = this.getAllNodes();
-    const edges = this.getAllEdges();
-    
-    let totalConnections = 0;
-    let isolatedNodes = 0;
-
-    for (const nodeId of nodes) {
-      const connections =
-        note.forwardLinks.length + note.backlinks.length;
-      totalConnections += connections;
-      
-      if (connections === 0) {
-        isolatedNodes++;
-      }
-    }
-
-    const averageConnections =
-      nodes.length > 0 ? totalConnections / nodes.length : 0;
-
-    // 计算强连通分量（简化版）
-    const stronglyConnectedComponents = this.countSCC();
-
-    return {
-      totalNodes: nodes.length,
-      totalEdges: edges.length,
-      averageConnections,
-      isolatedNodes,
-      stronglyConnectedComponents
-    };
+    return this.graph.getStats();
   }
 
   /**
-   * 计算强连通分量数量（使用 Kosaraju 算法）
+   * 获取节点颜色（基于连接数）
    */
-  private countSCC(): number {
-    const nodes = this.getAllNodes();
-    if (nodes.length === 0) return 0;
-
-    const visited = new Set<string>();
-    const order: string[] = [];
-
-    // 第一次 DFS
-    const dfs1 = (nodeId: string) => {
-      visited.add(nodeId);
-      for (const neighbor of this.getForwardLinks(nodeId)) {
-        if (!visited.has(neighbor)) {
-          dfs1(neighbor);
-        }
-      order.push(nodeId);
-    }
-
-    // 构建反向图
-    const reverseAdjList: AdjacencyList = {};
-    for (const nodeId of nodes) {
-      reverseAdjList[nodeId] = {
-        forwardLinks: this.getBacklinks(nodeId),
-        backlinks: []
-      };
-    }
-
-    // 第二次 DFS（在反向图上）
-    let sccCount = 0;
-    visited.clear();
-
-    const dfs2 = (nodeId: string, adjList: AdjacencyList) => {
-      visited.add(nodeId);
-      for (const neighbor of adjList[nodeId]?.forwardLinks || []) {
-        if (!visited.has(neighbor)) {
-          dfs2(neighbor, adjList);
-        }
-      }
-
-    for (let i = order.length - 1; i >= 0; i--) {
-      const nodeId = order[i];
-      if (!visited.has(nodeId)) {
-        dfs2(nodeId, reverseAdjList);
-        sccCount++;
-      }
-    }
-
-    return sccCount;
+  private getNodeColor(connections: number): string {
+    if (connections === 0) return '#94a3b8';
+    if (connections < 3) return '#3b82f6';
+    if (connections < 6) return '#8b5cf6';
+    return '#ec4899';
   }
 }
+
+export { KnowledgeGraphEngine };

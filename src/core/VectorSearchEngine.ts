@@ -25,8 +25,7 @@ import {
   EmbeddingResult,
   SearchResult,
   SearchOptions,
-  IndexStatus,
-  IndexError
+  IndexStatus
 } from '../types';
 
 // ============================================================================
@@ -350,7 +349,6 @@ class VectorSearchEngine {
   private vectorDB: VectorDatabase;
   private embeddingWorker: Worker | null = null;
   private modelInitialized: boolean = false;
-  private modelDimension: number = 0;
   private notes: Map<string, Note>;
   private embeddingCache: Map<string, Float32Array>;
 
@@ -409,7 +407,7 @@ class VectorSearchEngine {
    * 初始化嵌入模型
    */
   async initializeModel(
-    onProgress?: (progress: number) => void
+    _onProgress?: (progress: number) => void
   ): Promise<void> {
     if (this.modelInitialized) return;
 
@@ -422,12 +420,12 @@ class VectorSearchEngine {
       const id = this.generateId();
 
       this.embeddingWorker.onmessage = (e) => {
-        const { id: messageId, success, data, error } = e.data;
+        const { id: messageId, success, error } = e.data;
 
         if (messageId === id) {
           if (success) {
             this.modelInitialized = true;
-            this.modelDimension = data.dimension;
+            // this.modelDimension = data.dimension; // 属性已删除
             resolve();
           } else {
             reject(new Error(error));
@@ -655,7 +653,7 @@ class VectorSearchEngine {
    */
   private async vectorSearch(
     query: string,
-    limit: number,
+    _limit: number,
     threshold: number
   ): Promise<SearchResult[]> {
     // 生成查询嵌入
@@ -692,9 +690,9 @@ class VectorSearchEngine {
    * 关键词搜索（使用 Orama）
    */
   private async keywordSearch(
-    query: string,
-    limit: number,
-    filters?: SearchOptions['filters']
+    _query: string,
+    _limit: number,
+    _filters?: SearchOptions['filters']
   ): Promise<SearchResult[]> {
     // 这里使用 Orama 进行关键词搜索
     // 伪代码实现

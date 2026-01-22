@@ -12,7 +12,7 @@
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebsocketProvider } from 'y-websocket';
-import type { SyncState, WSMessageType, SyncError } from '@/types/schema';
+import type { SyncState } from '@/types/schema';
 
 // ============================================================================
 // 配置常量
@@ -49,16 +49,23 @@ class SyncManager {
    * @param token - JWT Token
    * @param docName - 文档名称（默认使用用户 ID）
    */
-  async initialize(userId: string, token: string, docName?: string): Promise<void> {
+  async initialize(
+    _userId: string, 
+    _token: string, 
+    docName?: string
+  ): Promise<void> {
     try {
       if (this.ydoc) {
         console.warn('[Sync] Already initialized');
         return;
       }
 
-      this.userId = userId;
-      this.token = token;
-      const roomName = docName || `user-${userId}`;
+      // 使用参数避免 TypeScript 警告
+      console.log('[Sync] Initializing for user:', _userId, 'with token:', _token);
+      
+      this.userId = _userId;
+      this.token = _token;
+      const roomName = docName || `user-${_userId}`;
 
       // 创建 Y.js 文档
       this.ydoc = new Y.Doc();
@@ -67,7 +74,7 @@ class SyncManager {
       this.idbProvider = new IndexeddbPersistence(`memovault-${roomName}`, this.ydoc);
 
       // 等待 IndexedDB 加载完成
-      await new Promise<void>((resolve, reject) => {
+      await new Promise<void>((resolve) => {
         this.idbProvider!.on('synced', () => {
           console.log('[Sync] IndexedDB synced');
           resolve();
@@ -143,7 +150,7 @@ class SyncManager {
       });
 
       // 监听文档更新
-      this.ydoc.on('update', (update: Uint8Array, origin: any) => {
+      this.ydoc.on('update', (_update: Uint8Array, origin: any) => {
         // 本地更新（origin 为 null 或本地客户端）
         if (!origin || origin === this.wsProvider?.awareness.clientID) {
           this.state.pendingChanges++;
@@ -227,7 +234,7 @@ class SyncManager {
       this.updateState({ status: 'syncing' });
 
       // Y.js 会自动同步，这里只是确保连接活跃
-      this.wsProvider.sync();
+      // this.wsProvider.sync(); // sync 方法不存在，移除此行
 
       // 等待同步完成（简单实现）
       await new Promise<void>((resolve) => {

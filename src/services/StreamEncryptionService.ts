@@ -221,7 +221,7 @@ class StreamEncryptionService {
     const encryptedChunks: EncryptedChunk[] = [];
     
     // 2. 并行加密所有块（使用 TransformStream）
-    const encryptionStream = this.createEncryptionTransformStream(fileKey);
+    // const encryptionStream = this.createEncryptionTransformStream(fileKey);
     
     // 3. 处理每个块
     for (let i = 0; i < chunks.length; i++) {
@@ -391,77 +391,77 @@ class StreamEncryptionService {
    * 创建加密 TransformStream
    * 用于流式处理，避免一次性加载整个文件到内存
    */
-  private createEncryptionTransformStream(key: CryptoKey): TransformStream {
-    return new TransformStream({
-      transform: async (chunk: Uint8Array, controller) => {
-        try {
-          // 生成随机 IV
-          const iv = crypto.getRandomValues(new Uint8Array(this.config.ivSize));
-          
-          // 加密块
-          const encrypted = await crypto.subtle.encrypt(
-            { name: this.config.algorithm, iv },
-            key,
-            chunk
-          );
-          
-          // 输出：IV + 加密数据
-          const output = new Uint8Array(iv.length + encrypted.byteLength);
-          output.set(iv, 0);
-          output.set(new Uint8Array(encrypted), iv.length);
-          
-          controller.enqueue(output);
-        } catch (error) {
-          controller.error(error);
-        }
-      }
-    });
-  }
+  // private createEncryptionTransformStream(key: CryptoKey): TransformStream {
+  //   return new TransformStream({
+  //     transform: async (chunk: Uint8Array, controller) => {
+  //       try {
+  //         // 生成随机 IV
+  //         const iv = crypto.getRandomValues(new Uint8Array(this.config.ivSize));
+  //         
+  //         // 加密块
+  //         const encrypted = await crypto.subtle.encrypt(
+  //           { name: this.config.algorithm, iv },
+  //           key,
+  //           chunk
+  //         );
+  //         
+  //         // 输出：IV + 加密数据
+  //         const output = new Uint8Array(iv.length + encrypted.byteLength);
+  //         output.set(iv, 0);
+  //         output.set(new Uint8Array(encrypted), iv.length);
+  //         
+  //         controller.enqueue(output);
+  //       } catch (error) {
+  //         controller.error(error);
+  //       }
+  //     }
+  //   });
+  // }
 
   /**
    * 创建解密 TransformStream
    */
-  private createDecryptionTransformStream(key: CryptoKey): TransformStream {
-    let buffer = new Uint8Array(0);
-    
-    return new TransformStream({
-      transform: async (chunk: Uint8Array, controller) => {
-        try {
-          // 将新数据追加到缓冲区
-          const newBuffer = new Uint8Array(buffer.length + chunk.length);
-          newBuffer.set(buffer, 0);
-          newBuffer.set(chunk, buffer.length);
-          buffer = newBuffer;
-          
-          // 处理完整的块（IV + 加密数据）
-          const ivSize = this.config.ivSize;
-          while (buffer.length >= ivSize) {
-            const iv = buffer.slice(0, ivSize);
-            
-            // 计算加密数据大小（AES-GCM 会添加 16 字节认证标签）
-            const encryptedSize = buffer.length - ivSize;
-            if (encryptedSize < 16) break; // 至少需要认证标签
-            
-            const encryptedData = buffer.slice(ivSize);
-            
-            // 解密
-            const decrypted = await crypto.subtle.decrypt(
-              { name: this.config.algorithm, iv },
-              key,
-              encryptedData
-            );
-            
-            controller.enqueue(new Uint8Array(decrypted));
-            
-            // 清空缓冲区
-            buffer = new Uint8Array(0);
-          }
-        } catch (error) {
-          controller.error(error);
-        }
-      }
-    });
-  }
+  // private createDecryptionTransformStream(key: CryptoKey): TransformStream {
+  //   let buffer = new Uint8Array(0);
+  //   
+  //   return new TransformStream({
+  //     transform: async (chunk: Uint8Array, controller) => {
+  //       try {
+  //         // 将新数据追加到缓冲区
+  //         const newBuffer = new Uint8Array(buffer.length + chunk.length);
+  //         newBuffer.set(buffer, 0);
+  //         newBuffer.set(chunk, buffer.length);
+  //         buffer = newBuffer;
+  //         
+  //         // 处理完整的块（IV + 加密数据）
+  //         const ivSize = this.config.ivSize;
+  //         while (buffer.length >= ivSize) {
+  //           const iv = buffer.slice(0, ivSize);
+  //           
+  //           // 计算加密数据大小（AES-GCM 会添加 16 字节认证标签）
+  //           const encryptedSize = buffer.length - ivSize;
+  //           if (encryptedSize < 16) break; // 至少需要认证标签
+  //           
+  //           const encryptedData = buffer.slice(ivSize);
+  //           
+  //           // 解密
+  //           const decrypted = await crypto.subtle.decrypt(
+  //             { name: this.config.algorithm, iv },
+  //             key,
+  //             encryptedData
+  //           );
+  //           
+  //           controller.enqueue(new Uint8Array(decrypted));
+  //           
+  //           // 清空缓冲区
+  //           buffer = new Uint8Array(0);
+  //         }
+  //       } catch (error) {
+  //         controller.error(error);
+  //       }
+  //     }
+  //   });
+  // }
 
   // ========================================================================
   // 辅助方法
@@ -540,7 +540,7 @@ class StreamEncryptionService {
     
     return {
       encryptedData: this.arrayBufferToBase64(encrypted),
-      iv: this.arrayBufferToBase64(iv)
+      iv: this.arrayBufferToBase64(iv.buffer)
     };
   }
 
@@ -578,7 +578,7 @@ class StreamEncryptionService {
       rawKey
     );
     
-    return this.arrayBufferToBase64(encrypted) + '.' + this.arrayBufferToBase64(iv);
+    return this.arrayBufferToBase64(encrypted) + '.' + this.arrayBufferToBase64(iv.buffer);
   }
 
   /**
@@ -624,7 +624,7 @@ class StreamEncryptionService {
       data
     );
     
-    return this.arrayBufferToBase64(encrypted) + '.' + this.arrayBufferToBase64(iv);
+    return this.arrayBufferToBase64(encrypted) + '.' + this.arrayBufferToBase64(iv.buffer);
   }
 
   /**
