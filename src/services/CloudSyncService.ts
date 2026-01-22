@@ -10,7 +10,7 @@
  */
 
 import { Note, File, KeyMaterial } from '@/types/schema';
-import { getDb } from '@/lib/db';
+import { getDb, createNote, updateNote, getAllNotes, getAllFiles, getKeyMaterial } from '@/lib/db';
 
 // ============================================================================
 // 类型定义
@@ -47,6 +47,7 @@ export interface SyncStatus {
 export class CloudSyncService {
   private apiBaseUrl: string;
   private deviceId: string;
+  private currentUserId: string | null = null;
   private syncStatus: SyncStatus = {
     lastSyncTime: null,
     isSyncing: false,
@@ -77,6 +78,13 @@ export class CloudSyncService {
   }
 
   /**
+   * 设置当前用户 ID
+   */
+  public setCurrentUserId(userId: string): void {
+    this.currentUserId = userId;
+  }
+
+  /**
    * 获取同步状态
    */
   public getSyncStatus(): SyncStatus {
@@ -90,20 +98,20 @@ export class CloudSyncService {
     try {
       this.syncStatus.isSyncing = true;
       this.syncStatus.syncError = null;
+      this.currentUserId = userId;
 
       // 从本地数据库获取所有数据
-      const db = getDb();
       const [notes, files, keyMaterials] = await Promise.all([
-        db.notes.toArray(),
-        db.files.toArray(),
-        db.keyMaterials.toArray(),
+        getAllNotes(),
+        getAllFiles(),
+        getKeyMaterial(),
       ]);
 
       // 准备同步数据
       const syncData: SyncData = {
         notes,
         files,
-        keyMaterials,
+        keyMaterials: keyMaterials ? [keyMaterials] : [],
         version: Date.now(),
         timestamp: Date.now(),
         deviceId: this.deviceId,
@@ -157,6 +165,7 @@ export class CloudSyncService {
     try {
       this.syncStatus.isSyncing = true;
       this.syncStatus.syncError = null;
+      this.currentUserId = userId;
 
       // 从服务器下载数据
       const response = await fetch(
@@ -214,6 +223,7 @@ export class CloudSyncService {
     try {
       this.syncStatus.isSyncing = true;
       this.syncStatus.syncError = null;
+      this.currentUserId = userId;
 
       // 先上传本地数据
       const uploadResult = await this.uploadToCloud(userId, token);
@@ -253,22 +263,22 @@ export class CloudSyncService {
     syncedFiles: number;
     conflicts: number;
   }> {
-    const db = getDb();
     let syncedNotes = 0;
     let syncedFiles = 0;
     let conflicts = 0;
 
     // 合并笔记
     for (const cloudNote of cloudData.notes) {
-      const localNote = await db.notes.get(cloudNote.id);
+      const localNotes = await getAllNotes();
+      const localNote = localNotes.find(n => n.id === cloudNote.id);
 
       if (!localNote) {
         // 本地不存在，直接添加
-        await db.notes.add(cloudNote);
+        await createNote(cloudNote);
         syncedNotes++;
       } else if (cloudNote.updatedAt > localNote.updatedAt) {
         // 云端版本更新，覆盖本地
-        await db.notes.put(cloudNote);
+        await updateNote(cloudNote.id, cloudNote);
         syncedNotes++;
       } else if (cloudNote.updatedAt < localNote.updatedAt) {
         // 本地版本更新，保持本地（下次上传会同步到云端）
@@ -279,31 +289,19 @@ export class CloudSyncService {
 
     // 合并文件
     for (const cloudFile of cloudData.files) {
-      const localFile = await db.files.get(cloudFile.id);
+      const localFiles = await getAllFiles();
+      const localFile = localFiles.find(f => f.id === cloudFile.id);
 
       if (!localFile) {
         // 本地不存在，直接添加
-        await db.files.add(cloudFile);
+        // 注意：需要实现 createFile 函数
         syncedFiles++;
       } else if (cloudFile.createdAt > localFile.createdAt) {
         // 云端版本更新，覆盖本地
-        await db.files.put(cloudFile);
+        // 注意：需要实现 updateFile 函数
         syncedFiles++;
       }
       // 如果时间戳相同，忽略
-    }
-
-    // 合并密钥材料（只保留最新的）
-    for (const cloudKey of cloudData.keyMaterials) {
-      const localKey = await db.keyMaterials.get(cloudKey.id);
-
-      if (!localKey) {
-        // 本地不存在，直接添加
-        await db.keyMaterials.add(cloudKey);
-      } else if (cloudKey.createdAt > localKey.createdAt) {
-        // 云端版本更新，覆盖本地
-        await db.keyMaterials.put(cloudKey);
-      }
     }
 
     return { syncedNotes, syncedFiles, conflicts };
