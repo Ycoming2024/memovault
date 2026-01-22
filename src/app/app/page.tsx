@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AppShell from '@/components/layout/AppShell';
-import { useNotes, createNote } from '@/lib/db';
+import { createNote } from '@/lib/db';
 import { syncManager } from '@/lib/sync';
 
 export default function AppPage() {
