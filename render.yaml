@@ -1,0 +1,89 @@
+# ========================================
+# MemoVault Render 配置
+# ========================================
+#
+# 用于部署到 Render 平台
+#
+# 使用方法：
+# 1. 将此文件提交到 Git 仓库
+# 2. 在 Render 控制台连接 GitHub 仓库
+# 3. Render 会自动读取此配置文件
+#
+# ========================================
+
+services:
+  # ========================================
+  # Next.js 应用
+  # ========================================
+  - type: web
+    name: memovault-app
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: memovault-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: WS_PORT
+        value: 3001
+      - key: NEXT_PUBLIC_WS_URL
+        value: wss://memovault-app.onrender.com
+      - key: S3_ENDPOINT
+        value: https://your-s3-endpoint.com
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      - key: S3_BUCKET
+        value: memovault-blobs
+      - key: S3_REGION
+        value: us-east-1
+    healthCheckPath: /api/health
+
+  # ========================================
+  # WebSocket 服务器
+  # ========================================
+  - type: web
+    name: memovault-ws
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npx tsc -p tsconfig.server.json
+    startCommand: node ws-server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: WS_PORT
+        value: 3001
+      - key: JWT_SECRET
+        sync: false
+    healthCheckPath: /health
+
+# ========================================
+# PostgreSQL 数据库
+# ========================================
+databases:
+  - name: memovault-db
+    databaseName: memovault
+    user: memovault
+    region: oregon
+    plan: free
+    maxConnections: 10
+
+# ========================================
+# Cron 任务（可选）
+# ========================================
+cronJobs:
+  - name: backup-database
+    schedule: "0 0 * * *"
+    command: npm run backup
+    service: memovault-app

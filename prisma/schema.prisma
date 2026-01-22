@@ -1,0 +1,60 @@
+// Prisma Schema for MemoVault
+// 注意：此数据库仅存储元数据，不存储实际内容（内容在客户端加密后存储于 S3）
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户账户表
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  authHash      String    // PBKDF2 派生的认证哈希（非密码本身）
+  salt          Bytes     // PBKDF2 盐值（用于密码验证）
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // 关联
+  encryptedBlobs EncryptedBlob[]
+  
+  @@index([email])
+}
+
+// 加密 Blob 元数据表
+// 实际加密内容存储在 S3/MinIO/R2
+model EncryptedBlob {
+  id          String   @id @default(cuid())
+  userId      String
+  blobId      String   @unique // S3 中的唯一标识
+  size        BigInt   // 加密后的大小（字节）
+  mimeType    String?  // MIME 类型（可选）
+  checksum    String   // SHA-256 校验和
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 关联
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([blobId])
+}
+
+// 同步状态表（可选，用于追踪同步进度）
+model SyncState {
+  id          String   @id @default(cuid())
+  userId      String
+  deviceId    String   // 设备标识符
+  lastSyncAt  DateTime @default(now())
+  syncStatus  String   // "synced", "pending", "error"
+  errorMessage String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([userId, deviceId])
+  @@index([userId])
+}
