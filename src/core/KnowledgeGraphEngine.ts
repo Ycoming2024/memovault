@@ -47,7 +47,7 @@ class WikiLinkParser {
       const linkContent = match[1];
       
       // 解析别名：[[NoteTitle|Alias]]
-      const [targetTitle, alias] = linkContent.split('|');
+      const [title, alias] = linkContent.split('|');
       
       links.push({
         text: fullText,
