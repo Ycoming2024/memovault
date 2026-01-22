@@ -10,16 +10,8 @@ import { useRouter } from 'next/navigation';
 import AppShell from '@/components/layout/AppShell';
 import { createNote } from '@/lib/db';
 import { syncManager } from '@/lib/sync';
+// 1. 确保已引入组件
 import SyncControl from '@/components/sync/SyncControl';
-
-export default function AppPage() {
-  return (
-    <div>
-      {/* 其他内容 */}
-      <SyncControl />
-    </div>
-  );
-}
 
 export default function AppPage() {
   const router = useRouter();
@@ -29,22 +21,21 @@ export default function AppPage() {
   // 检查用户是否已登录
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) {
+    const userId = localStorage.getItem('userId');
+
+    if (!token || !userId) {
       router.push('/');
     } else {
       setIsAuthenticated(true);
       
       // 初始化同步引擎
-      const userId = localStorage.getItem('userId');
-      if (userId && token) {
-        syncManager.initialize(userId, token, `user-${userId}`)
-          .then(() => {
-            console.log('[App] Sync engine initialized');
-          })
-          .catch((error) => {
-            console.error('[App] Failed to initialize sync engine:', error);
-          });
-      }
+      syncManager.initialize(userId, token, `user-${userId}`)
+        .then(() => {
+          console.log('[App] Sync engine initialized');
+        })
+        .catch((error) => {
+          console.error('[App] Failed to initialize sync engine:', error);
+        });
     }
   }, [router]);
 
@@ -64,7 +55,7 @@ export default function AppPage() {
       alert('创建笔记失败');
     }
   };
-
+  
   // 处理登出
   const handleLogout = async () => {
     // 断开同步连接
@@ -89,12 +80,17 @@ export default function AppPage() {
     );
   }
 
+  // 2. 修改返回结构，添加 SyncControl
   return (
-    <AppShell
-      selectedNoteId={selectedNoteId}
-      onNoteSelect={setSelectedNoteId}
-      onNewNote={handleNewNote}
-      onLogout={handleLogout}
-    />
+    <>
+      <AppShell
+        selectedNoteId={selectedNoteId}
+        onNoteSelect={setSelectedNoteId}
+        onNewNote={handleNewNote}
+        onLogout={handleLogout}
+      />
+      {/* 同步控制组件 - 通常作为浮动窗口或状态栏显示 */}
+      <SyncControl />
+    </>
   );
 }
