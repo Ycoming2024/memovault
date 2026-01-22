@@ -13,7 +13,6 @@ import { syncManager } from '@/lib/sync';
 
 export default function AppPage() {
   const router = useRouter();
-  const notes = useNotes();
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

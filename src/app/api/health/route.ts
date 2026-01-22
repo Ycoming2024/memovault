@@ -22,7 +22,8 @@ export const dynamic = 'force-dynamic';
  */
 function getVersion(): string {
   try {
-    const packageJson = require('../../../package.json');
+    // 在 Next.js 中，package.json 位于项目根目录
+    const packageJson = require('../../../../package.json');
     return packageJson.version || '1.0.0';
   } catch (error) {
     return '1.0.0';
