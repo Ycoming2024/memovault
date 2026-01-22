@@ -106,8 +106,8 @@ class SyncManager {
           connect: true,
           // 通过 WebSocket 子协议传递认证信息
           params: {
-            token,
-            userId,
+            token: this.token,
+            userId: this.userId,
           },
         }
       );
