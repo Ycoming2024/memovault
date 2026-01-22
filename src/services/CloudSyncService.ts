@@ -63,6 +63,11 @@ export class CloudSyncService {
    * 获取或创建设备 ID
    */
   private getOrCreateDeviceId(): string {
+    // 只在客户端访问 localStorage
+    if (typeof window === 'undefined') {
+      return crypto.randomUUID();
+    }
+
     let deviceId = localStorage.getItem('memovault-device-id');
     if (!deviceId) {
       deviceId = crypto.randomUUID();

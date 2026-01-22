@@ -6,6 +6,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/server/auth';
 
+// 标记为动态路由，避免静态生成错误
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // 内存存储（生产环境应使用数据库）
 // ============================================================================
