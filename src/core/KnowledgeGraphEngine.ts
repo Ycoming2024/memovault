@@ -21,8 +21,7 @@ import {
   GraphNode,
   GraphEdge,
   AdjacencyList,
-  GraphStats,
-  LinkError
+  GraphStats
 } from '../types';
 
 // ============================================================================
