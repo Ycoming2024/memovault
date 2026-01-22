@@ -10,6 +10,16 @@ import { useRouter } from 'next/navigation';
 import AppShell from '@/components/layout/AppShell';
 import { createNote } from '@/lib/db';
 import { syncManager } from '@/lib/sync';
+import SyncControl from '@/components/sync/SyncControl';
+
+export default function AppPage() {
+  return (
+    <div>
+      {/* 其他内容 */}
+      <SyncControl />
+    </div>
+  );
+}
 
 export default function AppPage() {
   const router = useRouter();
