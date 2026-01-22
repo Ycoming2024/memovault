@@ -15,7 +15,6 @@ export default function AppPage() {
   const router = useRouter();
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   // 检查用户是否已登录
   useEffect(() => {
