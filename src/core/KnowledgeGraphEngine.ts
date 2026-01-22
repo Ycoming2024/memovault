@@ -33,7 +33,7 @@ import {
  * 支持：[[NoteTitle]] 和 [[NoteTitle|Alias]]
  */
 class WikiLinkParser {
-  private static readonly WIKI_LINK_REGEX = /\[\[([^\]]+)\]\]/g;
+  private static readonly WIKI_LINK_REGEX = /\[\[([^\]]+)\]/g;
 
   /**
    * 解析笔记内容中的所有 WikiLink
@@ -51,7 +51,7 @@ class WikiLinkParser {
       
       links.push({
         text: fullText,
-        targetId: undefined, // 将在解析后解析为具体 ID
+        targetId: undefined,
         alias: alias?.trim(),
         position: {
           start: match.index,
@@ -81,7 +81,7 @@ class WikiLinkParser {
 
     return {
       targetNoteId,
-      targetNoteTitle: wikiLink.alias || wikiLink.text.slice(2, -2),
+      targetNoteTitle: wikiLink.alias || wikiLink.text.slice(2, - 2),
       context,
       position: wikiLink.position,
       createdAt: Date.now()
@@ -159,7 +159,7 @@ class GraphDataStructure {
       this.adjacencyList[targetId].backlinks =
         this.adjacencyList[targetId].backlinks.filter(
           id => id !== sourceId
-        );
+         );
     }
   }
 
@@ -272,14 +272,7 @@ class GraphDataStructure {
         if (!visited.has(neighbor)) {
           dfs1(neighbor);
         }
-      }
       order.push(nodeId);
-    };
-
-    for (const nodeId of nodes) {
-      if (!visited.has(nodeId)) {
-        dfs1(nodeId);
-      }
     }
 
     // 构建反向图
@@ -302,7 +295,6 @@ class GraphDataStructure {
           dfs2(neighbor, adjList);
         }
       }
-    };
 
     for (let i = order.length - 1; i >= 0; i--) {
       const nodeId = order[i];
@@ -384,7 +376,7 @@ class KnowledgeGraphEngine {
 
     // 移除所有链接
     for (const link of note.forwardLinks) {
-      this.graph.removeEdge(noteId, link.targetNoteId);
+      this.graph.removeEdge(note.id, link.targetNoteId);
     }
 
     // 从反向链接中移除
@@ -414,7 +406,7 @@ class KnowledgeGraphEngine {
 
     for (const wikiLink of wikiLinks) {
       // 查找目标笔记 ID
-      const targetTitle = wikiLink.alias || wikiLink.text.slice(2, -2);
+      const targetTitle = wikiLink.alias || wikiLink.text.slice(2, - 2);
       const targetId = this.titleToIdMap.get(targetTitle.toLowerCase());
 
       if (targetId) {
@@ -436,6 +428,7 @@ class KnowledgeGraphEngine {
 
     // 更新笔记的链接
     note.forwardLinks = linkReferences;
+  }
 
     // 更新反向链接
     await this.updateBacklinks(note);
@@ -499,271 +492,112 @@ class KnowledgeGraphEngine {
         note.forwardLinks.length + note.backlinks.length;
 
       nodes.push({
-        id: note.id,
-        title: note.title,
-        size: Math.max(20, Math.min(60, 20 + connections * 5)),
-        color: this.getNodeColor(connections),
-        group: this.getNodeGroup(note)
-      });
-    }
-
-    // 生成边
-    for (const note of this.notes.values()) {
-      if (note.isDeleted) continue;
-
-      for (const link of note.forwardLinks) {
-        const targetNote = this.notes.get(link.targetNoteId);
-        if (targetNote && !targetNote.isDeleted) {
-          edges.push({
-            source: note.id,
-            target: link.targetNoteId,
-            weight: 1,
-            type: this.graph.isBidirectional(note.id, link.targetNoteId)
-              ? 'bidirectional'
-              : 'forward'
-          });
-        }
-      }
-    }
-
-    return { nodes, edges };
-  }
-
-  /**
-   * 根据连接数获取节点颜色
-   */
-  private getNodeColor(connections: number): string {
-    if (connections === 0) return '#cccccc';
-    if (connections <= 2) return '#4a90e2';
-    if (connections <= 5) return '#50c878';
-    if (connections <= 10) return '#ff6b6b';
-    return '#ffd700';
-  }
-
-  /**
-   * 获取节点分组（基于标签）
-   */
-  private getNodeGroup(note: Note): string {
-    if (note.tags.length === 0) return 'default';
-    return note.tags[0];
-  }
-
-  /**
-   * 生成子图（从指定节点开始）
-   */
-  generateSubgraph(
-    startNodeId: string,
-    depth: number = 2
-  ): {
-    nodes: GraphNode[];
-    edges: GraphEdge[];
-  } {
-    const visited = new Set<string>();
-    const nodes: GraphNode[] = [];
-    const edges: GraphEdge[] = [];
-
-    const bfs = (nodeId: string, currentDepth: number) => {
-      if (currentDepth > depth || visited.has(nodeId)) return;
-
-      visited.add(nodeId);
-
-      const note = this.notes.get(nodeId);
-      if (note && !note.isDeleted) {
-        nodes.push({
+        data: {
           id: note.id,
-          title: note.title,
-          size: 30,
-          color: '#4a90e2',
-          group: this.getNodeGroup(note)
+          label: note.title,
+          weight: connections
+        },
+        });
+
+      // 生成边
+      for (const link of note.forwardLinks) {
+        edges.push({
+          data: {
+            source: note.id,
+            targetId: link.targetNoteId
+          },
+          weight: 1
         });
       }
-
-      // 遍历前向链接
-      for (const targetId of this.graph.getForwardLinks(nodeId)) {
-        if (!visited.has(targetId)) {
-          edges.push({
-            source: nodeId,
-            target: targetId,
-            weight: 1,
-            type: 'forward'
-          });
-          bfs(targetId, currentDepth + 1);
-        }
-      }
-
-      // 遍历反向链接
-      for (const sourceId of this.graph.getBacklinks(nodeId)) {
-        if (!visited.has(sourceId)) {
-          edges.push({
-            source: sourceId,
-            target: nodeId,
-            weight: 1,
-            type: 'forward'
-          });
-          bfs(sourceId, currentDepth + 1);
-        }
-      }
-    };
-
-    bfs(startNodeId, 0);
+    }
 
     return { nodes, edges };
   }
 
-  // ========================================================================
-  // 图分析
-  // ========================================================================
-
   /**
-   * 获取图的统计信息
+   * 计算图的统计信息
    */
   getStats(): GraphStats {
-    return this.graph.getStats();
-  }
+    const nodes = this.getAllNodes();
+    const edges = this.getAllEdges();
+    
+    let totalConnections = 0;
+    let isolatedNodes = 0;
 
-  /**
-   * 查找最相关的笔记（基于链接数量）
-   */
-  findMostConnectedNotes(limit: number = 10): Note[] {
-    const noteConnections = Array.from(this.notes.values())
-      .filter(note => !note.isDeleted)
-      .map(note => ({
-        note,
-        connections: note.forwardLinks.length + note.backlinks.length
-      }))
-      .sort((a, b) => b.connections - a.connections)
-      .slice(0, limit);
-
-    return noteConnections.map(nc => nc.note);
-  }
-
-  /**
-   * 查找孤立笔记（没有链接的笔记）
-   */
-  findIsolatedNotes(): Note[] {
-    return Array.from(this.notes.values())
-      .filter(note => !note.isDeleted)
-      .filter(
-        note =>
-          note.forwardLinks.length === 0 && note.backlinks.length === 0
-      );
-  }
-
-  /**
-   * 查找最短路径（BFS）
-   */
-  findShortestPath(
-    startId: string,
-    endId: string
-  ): string[] | null {
-    if (startId === endId) return [startId];
-
-    const queue: string[][] = [[startId]];
-    const visited = new Set<string>([startId]);
-
-    while (queue.length > 0) {
-      const path = queue.shift()!;
-      const currentId = path[path.length - 1];
-
-      // 检查前向链接
-      for (const neighbor of this.graph.getForwardLinks(currentId)) {
-        if (neighbor === endId) {
-          return [...path, neighbor];
-        }
-
-        if (!visited.has(neighbor)) {
-          visited.add(neighbor);
-          queue.push([...path, neighbor]);
-        }
-      }
-
-      // 检查反向链接
-      for (const neighbor of this.graph.getBacklinks(currentId)) {
-        if (neighbor === endId) {
-          return [...path, neighbor];
-        }
-
-        if (!visited.has(neighbor)) {
-          visited.add(neighbor);
-          queue.push([...path, neighbor]);
-        }
+    for (const nodeId of nodes) {
+      const connections =
+        note.forwardLinks.length + note.backlinks.length;
+      totalConnections += connections;
+      
+      if (connections === 0) {
+        isolatedNodes++;
       }
     }
 
-    return null; // 没有路径
+    const averageConnections =
+      nodes.length > 0 ? totalConnections / nodes.length : 0;
+
+    // 计算强连通分量（简化版）
+    const stronglyConnectedComponents = this.countSCC();
+
+    return {
+      totalNodes: nodes.length,
+      totalEdges: edges.length,
+      averageConnections,
+      isolatedNodes,
+      stronglyConnectedComponents
+    };
   }
 
   /**
-   * 查找笔记之间的所有路径（DFS）
+   * 计算强连通分量数量（使用 Kosaraju 算法）
    */
-  findAllPaths(
-    startId: string,
-    endId: string,
-    maxDepth: number = 5
-  ): string[][] {
-    const paths: string[][] = [];
+  private countSCC(): number {
+    const nodes = this.getAllNodes();
+    if (nodes.length === 0) return 0;
 
-    const dfs = (
-      currentId: string,
-      path: string[],
-      visited: Set<string>
-    ) => {
-      if (path.length > maxDepth) return;
+    const visited = new Set<string>();
+    const order: string[] = [];
 
-      if (currentId === endId) {
-        paths.push([...path]);
-        return;
-      }
-
-      visited.add(currentId);
-
-      // 遍历所有邻居
-      const neighbors = [
-        ...this.graph.getForwardLinks(currentId),
-        ...this.graph.getBacklinks(currentId)
-      ];
-
-      for (const neighbor of neighbors) {
+    // 第一次 DFS
+    const dfs1 = (nodeId: string) => {
+      visited.add(nodeId);
+      for (const neighbor of this.getForwardLinks(nodeId)) {
         if (!visited.has(neighbor)) {
-          dfs(neighbor, [...path, neighbor], new Set(visited));
+          dfs1(neighbor);
+        }
+      order.push(nodeId);
+    }
+
+    // 构建反向图
+    const reverseAdjList: AdjacencyList = {};
+    for (const nodeId of nodes) {
+      reverseAdjList[nodeId] = {
+        forwardLinks: this.getBacklinks(nodeId),
+        backlinks: []
+      };
+    }
+
+    // 第二次 DFS（在反向图上）
+    let sccCount = 0;
+    visited.clear();
+
+    const dfs2 = (nodeId: string, adjList: AdjacencyList) => {
+      visited.add(nodeId);
+      for (const neighbor of adjList[nodeId]?.forwardLinks || []) {
+        if (!visited.has(neighbor)) {
+          dfs2(neighbor, adjList);
         }
       }
-    };
 
-    dfs(startId, [startId], new Set());
+    for (let i = order.length - 1; i >= 0; i--) {
+      const nodeId = order[i];
+      if (!visited.has(nodeId)) {
+        dfs2(nodeId, reverseAdjList);
+        sccCount++;
+      }
+    }
 
-    return paths;
-  }
-
-  // ========================================================================
-  // 导出和导入
-  // ========================================================================
-
-  /**
-   * 导出图数据为 JSON
-   */
-  exportGraph(): string {
-    const data = {
-      nodes: this.generateCytoscapeData().nodes,
-      edges: this.generateCytoscapeData().edges,
-      stats: this.getStats()
-    };
-    return JSON.stringify(data, null, 2);
-  }
-
-  /**
-   * 导入图数据
-   */
-  importGraph(jsonData: string): void {
-    const data = JSON.parse(jsonData);
-    // 这里可以实现导入逻辑
-    // 注意：需要重新构建 notes 和 titleToIdMap
+    return sccCount;
   }
 }
-
-// ============================================================================
-// 导出
-// ============================================================================
-
-export default KnowledgeGraphEngine;
-export { WikiLinkParser, GraphDataStructure };
