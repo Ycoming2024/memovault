@@ -63,7 +63,9 @@ git add src/app/app/page.tsx
 git commit -m "fix: 修复构建错误
 
 - 修复健康检查 API 端点中的 package.json 路径
-- 移除未使用的 useNotes 导入和变量
+- 移除未使用的 useNotes 导入
+- 移除未使用的 notes 变量
+- 移除未使用的 isLoading 变量
 "
 ```
 
@@ -211,7 +213,9 @@ git add .
 git commit -m "fix: 修复构建错误
 
 - 修复健康检查 API 端点中的 package.json 路径
-- 移除未使用的 useNotes 导入和变量
+- 移除未使用的 useNotes 导入
+- 移除未使用的 notes 变量
+- 移除未使用的 isLoading 变量
 "
 
 # 5. 推送到 GitHub

@@ -40,7 +40,6 @@ export default function AppPage() {
 
   // 处理创建新笔记
   const handleNewNote = async () => {
-    setIsLoading(true);
     try {
       const newNote = await createNote({
         title: '新笔记',
@@ -53,8 +52,6 @@ export default function AppPage() {
     } catch (error) {
       console.error('Error creating note:', error);
       alert('创建笔记失败');
-    } finally {
-      setIsLoading(false);
     }
   };
 
