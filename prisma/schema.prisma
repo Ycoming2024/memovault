@@ -1,5 +1,5 @@
 // Prisma Schema for MemoVault
-// 注意：此数据库仅存储元数据，不存储实际内容（内容在客户端加密后存储于 S3）
+// 注意：此数据库仅存储元数据，不存储实际内容（内容在客户端加密后存储于 S3/MinIO/R2）
 
 generator client {
   provider = "prisma-client-js"
@@ -14,10 +14,11 @@ datasource db {
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
-  authHash      String    // PBKDF2 派生的认证哈希（非密码本身）
+  authHash      String    @map("auth_hash")  // PBKDF2 派生的认证哈希（非密码本身）
   salt          Bytes     // PBKDF2 盐值（用于密码验证）
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  userId        String    @unique @map("user_id")  // 客户端生成的用户 ID
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
   
   // 关联
   encryptedBlobs EncryptedBlob[]
@@ -29,13 +30,13 @@ model User {
 // 实际加密内容存储在 S3/MinIO/R2
 model EncryptedBlob {
   id          String   @id @default(cuid())
-  userId      String
+  userId      String   @map("user_id")
   blobId      String   @unique // S3 中的唯一标识
   size        BigInt   // 加密后的大小（字节）
   mimeType    String?  // MIME 类型（可选）
   checksum    String   // SHA-256 校验和
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
   
   // 关联
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -44,17 +45,35 @@ model EncryptedBlob {
   @@index([blobId])
 }
 
-// 同步状态表（可选，用于追踪同步进度）
-model SyncState {
-  id          String   @id @default(cuid())
-  userId      String
-  deviceId    String   // 设备标识符
-  lastSyncAt  DateTime @default(now())
-  syncStatus  String   // "synced", "pending", "error"
-  errorMessage String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@unique([userId, deviceId])
+// 用户同步数据表
+// 存储每个用户的云端同步数据
+model UserSyncData {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  data      String   @db.Text  // JSON 字符串，包含 notes, files, keyMaterials
+  version   BigInt   @default(autoincrement())
+  deviceId  String   @map("device_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@index([userId])
+  @@index([version])
+  @@index([createdAt])
+}
+
+// 同步日志表
+// 记录用户的同步操作历史
+model SyncLog {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  action      String   // 'upload', 'download', 'sync', 'clear'
+  status      String   // 'success', 'error'
+  message     String?
+  notesCount  Int?     @map("notes_count")
+  filesCount  Int?     @map("files_count")
+  conflicts   Int?     @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([createdAt])
 }

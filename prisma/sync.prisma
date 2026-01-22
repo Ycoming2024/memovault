@@ -1,0 +1,48 @@
+// MemoVault 同步数据库模型
+// 用于存储用户的云端数据
+
+generator client {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  authHash  String   @map("auth_hash")
+  salt      String   @db.Text
+  userId    String   @map("user_id") @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([email])
+}
+
+model SyncData {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  data      String   @db.Text
+  version   BigInt   @default(autoincrement())
+  deviceId  String   @map("device_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([version])
+  @@index([createdAt])
+}
+
+model SyncLog {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  action    String   // 'upload', 'download', 'sync', 'clear'
+  status    String   // 'success', 'error'
+  message   String?
+  notesCount Int?   @map("notes_count")
+  filesCount Int?   @map("files_count")
+  conflicts  Int?   @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([createdAt])
+}
